@@ -1,5 +1,6 @@
-use chrono::{DateTime, Utc};
-use std::collections::HashMap;
+use chrono::DateTime;
+use chrono_tz::Tz;
+use std::str::FromStr;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Status {
@@ -15,30 +16,30 @@ pub enum Priority {
     High,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct Todo {
     pub id: u32,
     pub title: String,
     pub description: Option<String>,
     pub status: Status,
-    pub created_at: DateTime<Utc>,
-    pub due_date: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Tz>,
+    pub due_date: Option<DateTime<Tz>>,
     pub priority: Priority,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct CreateTodo {
     pub title: String,
     pub description: Option<String>,
-    pub due_date: Option<DateTime<Utc>>,
+    pub due_date: Option<DateTime<Tz>>,
     pub priority: Priority,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct UpdateTodo {
     pub title: Option<String>,
     pub description: Option<String>,
-    pub due_date: Option<DateTime<Utc>>,
+    pub due_date: Option<DateTime<Tz>>,
     pub status: Option<Status>,
     pub priority: Option<Priority>,
 }
@@ -48,79 +49,66 @@ impl Todo {
         id: u32,
         title: String,
         description: Option<String>,
-        due_date: Option<DateTime<Utc>>,
+        due_date: Option<DateTime<Tz>>,
         priority: Priority,
+        tz: Tz,
     ) -> Todo {
         Self {
             id,
             title,
             description,
             status: Status::InProgress,
-            created_at: Utc::now(),
+            created_at: chrono::Local::now().with_timezone(&tz),
             due_date,
             priority,
         }
     }
 }
 
-pub struct TodoList {
-    pub todos: HashMap<u32, Todo>,
-    next_id: u32,
+impl FromStr for Status {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "pending" => Ok(Status::Pending),
+            "inprogress" => Ok(Status::InProgress),
+            "completed" => Ok(Status::Completed),
+            _ => Err(()),
+        }
+    }
 }
 
-impl TodoList {
-    pub fn new() -> Self {
-        Self {
-            todos: HashMap::new(),
-            next_id: 1,
+impl FromStr for Priority {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "low" => Ok(Priority::Low),
+            "medium" => Ok(Priority::Medium),
+            "high" => Ok(Priority::High),
+            _ => Err(()),
         }
     }
+}
 
-    pub fn add(&mut self, create_todo: CreateTodo) -> u32 {
-        let id = self.next_id;
-        let todo = Todo::new(
-            id,
-            create_todo.title,
-            create_todo.description,
-            create_todo.due_date,
-            create_todo.priority,
-        );
-        self.todos.insert(id, todo);
-        self.next_id += 1;
-        id
-    }
-
-    pub fn update(&mut self, id: u32, update_todo: UpdateTodo) -> Option<()> {
-        if let Some(todo) = self.todos.get_mut(&id) {
-            if let Some(title) = update_todo.title {
-                todo.title = title;
-            }
-            if let Some(description) = update_todo.description {
-                todo.description = Some(description);
-            }
-            if let Some(due_date) = update_todo.due_date {
-                todo.due_date = Some(due_date);
-            }
-            if let Some(status) = update_todo.status {
-                todo.status = status;
-            }
-            if let Some(priority) = update_todo.priority {
-                todo.priority = priority;
-            }
-            Some(())
-        } else {
-            None
+impl ToString for Status {
+    fn to_string(&self) -> String {
+        match self {
+            Status::Pending => "Pending",
+            Status::InProgress => "InProgress",
+            Status::Completed => "Completed",
         }
+        .to_string()
     }
+}
 
-    pub fn delete(&mut self, id: u32) -> Option<Todo> {
-        self.todos.remove(&id)
-    }
-
-    pub fn list(&self) -> Vec<&Todo> {
-        self.todos.values().collect()
-    }
-    pub fn get(&self, id: u32) -> Option<&Todo> {
-        self.todos.get(&id)
+impl ToString for Priority {
+    fn to_string(&self) -> String {
+        match self {
+            Priority::Low => "Low",
+            Priority::Medium => "Medium",
+            Priority::High => "High",
+        }
+        .to_string()
     }
 }

@@ -9,3 +9,6 @@ anyhow = "1.0.86"
 chrono = "0.4.38"
 clap = { version = "4.5.9", features = ["derive"] }
 thiserror = "1.0.62"
+rusqlite = { version = "0.28.0", features = ["chrono"] }
+chrono-tz = "0.8"
+iana-time-zone = "0.1"
