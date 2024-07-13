@@ -11,15 +11,46 @@ pub struct Args {
     #[arg(short, long, help = "List up TODO's (Default)")]
     pub list: bool,
 
-    #[arg(short, long, help = "Add TODO")]
-    pub add: bool,
+    #[arg(short, long, value_name = "TITLE", help = "Add TODO with title")]
+    pub add: Option<String>,
 
-    #[arg(short, long, help = "Update TODO")]
-    pub update: bool,
+    #[arg(short, long, value_name = "ID", help = "Update TODO by ID")]
+    pub update: Option<u32>,
 
-    #[arg(short, long, help = "Delete TODO")]
-    pub delete: bool,
+    #[arg(short, long, value_name = "ID", help = "Delete TODO by ID")]
+    pub delete: Option<u32>,
 
-    #[arg(short, long, help = "Show Detail TODO")]
-    pub show: bool,
+    #[arg(short, long, value_name = "ID", help = "Show detail of TODO by ID")]
+    pub show: Option<u32>,
+
+    #[arg(long, value_name = "NAME", help = "Name for add or update")]
+    pub name: Option<String>,
+
+    #[arg(
+        long,
+        value_name = "DESCRIPTION",
+        help = "Description for add or update"
+    )]
+    pub description: Option<String>,
+
+    #[arg(
+        long,
+        value_name = "DATE",
+        help = "Due date for add or update (format: YYYY/MM/DD HH:MM:SS)"
+    )]
+    pub due_date: Option<String>,
+
+    #[arg(
+        long,
+        value_name = "PRIORITY",
+        help = "Priority for add or update (Low, Medium, High)"
+    )]
+    pub priority: Option<String>,
+
+    #[arg(
+        long,
+        value_name = "STATUS",
+        help = "Status for update (Pending, InProgress, Completed)"
+    )]
+    pub status: Option<String>,
 }
