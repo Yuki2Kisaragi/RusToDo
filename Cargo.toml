@@ -1,0 +1,11 @@
+[package]
+name = "rtd"
+version = "0.1.0"
+edition = "2021"
+description = "TodoList CLI Application"
+
+[dependencies]
+anyhow = "1.0.86"
+chrono = "0.4.38"
+clap = { version = "4.5.9", features = ["derive"] }
+thiserror = "1.0.62"
