@@ -70,7 +70,7 @@ fn main() -> Result<()> {
         println!("Added new TODO with ID: {}", id);
     } else if let Some(id) = args.update {
         let mut update_todo = UpdateTodo {
-            title: None,
+            title: args.name,
             description: args.description,
             due_date: None,
             status: None,
@@ -97,7 +97,7 @@ fn main() -> Result<()> {
     } else if let Some(id) = args.show {
         let todo = todo_list.get(id)?;
         println!("ID: {}", todo.id);
-        println!("Title: {}", todo.title);
+        println!("Name: {}", todo.title);
         println!("Description: {:?}", todo.description);
         println!("Status: {:?}", todo.status);
         println!("Priority: {:?}", todo.priority);
@@ -110,7 +110,7 @@ fn main() -> Result<()> {
         } else {
             for todo in todos {
                 println!(
-                    "ID: {}, Title: {}, Status: {:?}, Priority: {:?}, Due: {:?}",
+                    "ID: {}, Name: {}, Status: {:?}, Priority: {:?}, Due: {:?}",
                     todo.id, todo.title, todo.status, todo.priority, todo.due_date
                 );
             }

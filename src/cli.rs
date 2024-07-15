@@ -23,7 +23,7 @@ pub struct Args {
     #[arg(short, long, value_name = "ID", help = "Show detail of TODO by ID")]
     pub show: Option<u32>,
 
-    #[arg(long, value_name = "NAME", help = "Name for add or update")]
+    #[arg(short, long, value_name = "NAME", help = "Update TODO Name")]
     pub name: Option<String>,
 
     #[arg(
