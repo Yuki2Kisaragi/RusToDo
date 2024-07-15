@@ -5,10 +5,9 @@ edition = "2021"
 description = "TodoList CLI Application"
 
 [dependencies]
-anyhow = "1.0.86"
-chrono = "0.4.38"
-clap = { version = "4.5.9", features = ["derive"] }
-thiserror = "1.0.62"
-rusqlite = { version = "0.28.0", features = ["chrono"] }
+clap = { version = "4.2", features = ["derive"] }
+chrono = { version = "0.4", features = ["serde"] }
 chrono-tz = "0.8"
 iana-time-zone = "0.1"
+rusqlite = { version = "0.29.0", features = ["bundled", "chrono"] }
+anyhow = "1.0"

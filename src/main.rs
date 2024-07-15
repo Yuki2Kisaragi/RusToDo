@@ -2,6 +2,7 @@ mod cli;
 mod todo;
 mod todo_list;
 
+use anyhow::{anyhow, Context, Result};
 use chrono::{DateTime, TimeZone};
 use chrono_tz::Tz;
 use clap::Parser;
@@ -9,24 +10,27 @@ use cli::Args;
 use todo::{CreateTodo, Priority, Status, UpdateTodo};
 use todo_list::TodoList;
 
-fn parse_priority(priority: &str) -> Result<Priority, String> {
+fn parse_priority(priority: &str) -> Result<Priority> {
     priority
         .parse()
-        .map_err(|_| format!("Invalid priority: {}", priority))
+        .map_err(|_| anyhow!("Invalid status: {}. (Low, Medium, High)", priority))
 }
 
-fn parse_status(status: &str) -> Result<Status, String> {
-    status
-        .parse()
-        .map_err(|_| format!("Invalid status: {}", status))
+fn parse_status(status: &str) -> Result<Status> {
+    status.parse().map_err(|_| {
+        anyhow!(
+            "Invalid status: {}. (Pending, InProgress, Completed)",
+            status
+        )
+    })
 }
 
-fn parse_date(date_str: &str, tz: &Tz) -> Result<DateTime<Tz>, chrono::ParseError> {
+fn parse_date(date_str: &str, tz: &Tz) -> Result<DateTime<Tz>> {
     let naive = chrono::NaiveDateTime::parse_from_str(date_str, "%Y/%m/%d %H:%M:%S")?;
     Ok(tz.from_local_datetime(&naive).single().unwrap())
 }
+
 fn get_local_timezone() -> Tz {
-    use chrono_tz::Tz;
     use iana_time_zone::get_timezone;
     use std::str::FromStr;
 
@@ -36,33 +40,24 @@ fn get_local_timezone() -> Tz {
     }
 }
 
-fn main() {
+fn main() -> Result<()> {
     let args = Args::parse();
 
-    // システムのタイムゾーンを取得
     let local_tz = get_local_timezone();
-    let mut todo_list = TodoList::new(local_tz);
+    let todo_list = TodoList::new(local_tz).context("Failed to create TodoList")?;
 
     if let Some(title) = args.add {
         let priority = args
             .priority
             .as_deref()
             .map(parse_priority)
-            .unwrap_or(Ok(Priority::Medium))
-            .unwrap_or_else(|e| {
-                eprintln!("{}", e);
-                Priority::Medium
-            });
+            .unwrap_or(Ok(Priority::Medium))?;
 
         let due_date = args
             .due_date
             .as_deref()
             .map(|date_str| parse_date(date_str, &local_tz))
-            .transpose()
-            .unwrap_or_else(|e| {
-                eprintln!("Invalid date format: {}", e);
-                None
-            });
+            .transpose()?;
 
         let new_todo = CreateTodo {
             title,
@@ -71,7 +66,7 @@ fn main() {
             priority,
         };
 
-        let id = todo_list.add(new_todo);
+        let id = todo_list.add(new_todo)?;
         println!("Added new TODO with ID: {}", id);
     } else if let Some(id) = args.update {
         let mut update_todo = UpdateTodo {
@@ -83,46 +78,33 @@ fn main() {
         };
 
         if let Some(priority) = args.priority {
-            update_todo.priority = Some(parse_priority(&priority).unwrap_or_else(|e| {
-                eprintln!("{}", e);
-                Priority::Medium
-            }));
+            update_todo.priority = Some(parse_priority(&priority)?);
         }
 
         if let Some(status) = args.status {
-            update_todo.status = Some(parse_status(&status).unwrap_or_else(|e| {
-                eprintln!("{}", e);
-                Status::InProgress
-            }));
+            update_todo.status = Some(parse_status(&status)?);
         }
 
         if let Some(date_str) = args.due_date {
-            update_todo.due_date = parse_date(&date_str, &local_tz).ok();
+            update_todo.due_date = Some(parse_date(&date_str, &local_tz)?);
         }
 
-        match todo_list.update(id, update_todo) {
-            Some(_) => println!("Updated TODO with ID: {}", id),
-            None => println!("No TODO found with ID: {}", id),
-        }
+        todo_list.update(id, update_todo)?;
+        println!("Updated TODO with ID: {}", id);
     } else if let Some(id) = args.delete {
-        match todo_list.delete(id) {
-            Some(_) => println!("Deleted TODO with ID: {}", id),
-            None => println!("No TODO found with ID: {}", id),
-        }
+        todo_list.delete(id)?;
+        println!("Deleted TODO with ID: {}", id);
     } else if let Some(id) = args.show {
-        if let Some(todo) = todo_list.get(id) {
-            println!("ID: {}", todo.id);
-            println!("Title: {}", todo.title);
-            println!("Description: {:?}", todo.description);
-            println!("Status: {:?}", todo.status);
-            println!("Priority: {:?}", todo.priority);
-            println!("Created at: {}", todo.created_at);
-            println!("Due date: {:?}", todo.due_date);
-        } else {
-            println!("No TODO found with ID: {}", id);
-        }
+        let todo = todo_list.get(id)?;
+        println!("ID: {}", todo.id);
+        println!("Title: {}", todo.title);
+        println!("Description: {:?}", todo.description);
+        println!("Status: {:?}", todo.status);
+        println!("Priority: {:?}", todo.priority);
+        println!("Created at: {}", todo.created_at);
+        println!("Due date: {:?}", todo.due_date);
     } else if args.list || std::env::args().len() == 1 {
-        let todos = todo_list.list();
+        let todos = todo_list.list()?;
         if todos.is_empty() {
             println!("TODO list is empty.");
         } else {
@@ -137,8 +119,9 @@ fn main() {
         println!("Usage: rustodo [OPTIONS]");
         println!("Use --help to see available options.");
     }
-}
 
+    Ok(())
+}
 #[cfg(test)]
 mod tests {
     // use super::*;

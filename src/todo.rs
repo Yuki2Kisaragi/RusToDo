@@ -44,49 +44,15 @@ pub struct UpdateTodo {
     pub priority: Option<Priority>,
 }
 
-impl Todo {
-    pub fn new(
-        id: u32,
-        title: String,
-        description: Option<String>,
-        due_date: Option<DateTime<Tz>>,
-        priority: Priority,
-        tz: Tz,
-    ) -> Todo {
-        Self {
-            id,
-            title,
-            description,
-            status: Status::InProgress,
-            created_at: chrono::Local::now().with_timezone(&tz),
-            due_date,
-            priority,
-        }
-    }
-}
-
 impl FromStr for Status {
-    type Err = ();
+    type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "pending" => Ok(Status::Pending),
-            "inprogress" => Ok(Status::InProgress),
+            "inprogress" | "in progress" => Ok(Status::InProgress),
             "completed" => Ok(Status::Completed),
-            _ => Err(()),
-        }
-    }
-}
-
-impl FromStr for Priority {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "low" => Ok(Priority::Low),
-            "medium" => Ok(Priority::Medium),
-            "high" => Ok(Priority::High),
-            _ => Err(()),
+            _ => Err(format!("Invalid status: {}", s)),
         }
     }
 }
@@ -99,6 +65,19 @@ impl ToString for Status {
             Status::Completed => "Completed",
         }
         .to_string()
+    }
+}
+
+impl FromStr for Priority {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "low" => Ok(Priority::Low),
+            "medium" => Ok(Priority::Medium),
+            "high" => Ok(Priority::High),
+            _ => Err(format!("Invalid priority: {}", s)),
+        }
     }
 }
 
