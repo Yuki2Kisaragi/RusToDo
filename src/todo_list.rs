@@ -1,10 +1,11 @@
 use crate::todo::{CreateTodo, Status, Todo, UpdateTodo};
+use crate::Priority;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use chrono_tz::Tz;
 use rusqlite::{params, Connection, Result as SqliteResult};
 use std::path::Path;
-
+use std::str::FromStr;
 pub struct TodoList {
     conn: Connection,
     timezone: Tz,
@@ -16,8 +17,8 @@ impl TodoList {
         conn.execute(
             "CREATE TABLE IF NOT EXISTS todos (
                 id INTEGER PRIMARY KEY,
-                title TEXT NOT NULL,
-                description TEXT,
+                name TEXT NOT NULL,
+                text TEXT,
                 status TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 due_date TEXT,
@@ -30,12 +31,12 @@ impl TodoList {
 
     pub fn add(&self, create_todo: CreateTodo) -> Result<u32> {
         let mut stmt = self.conn.prepare(
-            "INSERT INTO todos (title, description, status, created_at, due_date, priority)
+            "INSERT INTO todos (name, text, status, created_at, due_date, priority)
              VALUES (?, ?, ?, ?, ?, ?)",
         )?;
         stmt.execute(params![
-            create_todo.title,
-            create_todo.description,
+            create_todo.name,
+            create_todo.text,
             Status::InProgress.to_string(),
             Utc::now().with_timezone(&self.timezone).to_rfc3339(),
             create_todo
@@ -49,12 +50,12 @@ impl TodoList {
     pub fn update(&self, id: u32, update_todo: UpdateTodo) -> Result<()> {
         let todo = self.get(id)?;
         let mut stmt = self.conn.prepare(
-            "UPDATE todos SET title = ?, description = ?, status = ?, due_date = ?, priority = ?
+            "UPDATE todos SET name = ?, text = ?, status = ?, due_date = ?, priority = ?
              WHERE id = ?",
         )?;
         stmt.execute(params![
-            update_todo.title.unwrap_or(todo.title),
-            update_todo.description.or(todo.description),
+            update_todo.name.unwrap_or(todo.name),
+            update_todo.text.or(todo.text),
             update_todo.status.unwrap_or(todo.status).to_string(),
             update_todo
                 .due_date
@@ -64,6 +65,28 @@ impl TodoList {
             id,
         ])?;
         Ok(())
+    }
+
+    pub fn get(&self, id: u32) -> Result<Todo> {
+        let mut stmt = self.conn.prepare("SELECT * FROM todos WHERE id = ?")?;
+        stmt.query_row(params![id], |row| {
+            Ok(Todo {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                text: row.get(2)?,
+                status: Status::from_str(&row.get::<_, String>(3)?).unwrap(),
+                created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(4)?)
+                    .unwrap()
+                    .with_timezone(&self.timezone),
+                due_date: row.get::<_, Option<String>>(5)?.map(|d| {
+                    DateTime::parse_from_rfc3339(&d)
+                        .unwrap()
+                        .with_timezone(&self.timezone)
+                }),
+                priority: Priority::from_str(&row.get::<_, String>(6)?).unwrap(),
+            })
+        })
+        .context("Todo not found")
     }
 
     pub fn delete(&self, id: u32) -> Result<()> {
@@ -77,8 +100,8 @@ impl TodoList {
         let todos = stmt.query_map([], |row| {
             Ok(Todo {
                 id: row.get(0)?,
-                title: row.get(1)?,
-                description: row.get(2)?,
+                name: row.get(1)?,
+                text: row.get(2)?,
                 status: row.get::<_, String>(3)?.parse().unwrap(),
                 created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(4)?)
                     .unwrap()
@@ -94,28 +117,6 @@ impl TodoList {
         todos
             .collect::<SqliteResult<Vec<Todo>>>()
             .context("Failed to collect todos")
-    }
-
-    pub fn get(&self, id: u32) -> Result<Todo> {
-        let mut stmt = self.conn.prepare("SELECT * FROM todos WHERE id = ?")?;
-        stmt.query_row(params![id], |row| {
-            Ok(Todo {
-                id: row.get(0)?,
-                title: row.get(1)?,
-                description: row.get(2)?,
-                status: row.get::<_, String>(3)?.parse().unwrap(),
-                created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(4)?)
-                    .unwrap()
-                    .with_timezone(&self.timezone),
-                due_date: row.get::<_, Option<String>>(5)?.map(|d| {
-                    DateTime::parse_from_rfc3339(&d)
-                        .unwrap()
-                        .with_timezone(&self.timezone)
-                }),
-                priority: row.get::<_, String>(6)?.parse().unwrap(),
-            })
-        })
-        .context("Todo not found")
     }
 }
 
@@ -137,8 +138,8 @@ mod tests {
     fn test_add_todo() {
         let (todo_list, _dir) = setup_test_db();
         let new_todo = CreateTodo {
-            title: "Test Todo".to_string(),
-            description: Some("Test Description".to_string()),
+            name: "Test Todo".to_string(),
+            text: Some("Test text".to_string()),
             due_date: Some(
                 Utc.with_ymd_and_hms(2023, 12, 31, 23, 59, 59)
                     .unwrap()
@@ -154,8 +155,8 @@ mod tests {
     fn test_get_todo() {
         let (todo_list, _dir) = setup_test_db();
         let new_todo = CreateTodo {
-            title: "Test Todo".to_string(),
-            description: Some("Test Description".to_string()),
+            name: "Test Todo".to_string(),
+            text: Some("Test text".to_string()),
             due_date: Some(
                 Utc.with_ymd_and_hms(2023, 12, 31, 23, 59, 59)
                     .unwrap()
@@ -166,8 +167,8 @@ mod tests {
         let id = todo_list.add(new_todo).unwrap();
 
         let todo = todo_list.get(id).unwrap();
-        assert_eq!(todo.title, "Test Todo");
-        assert_eq!(todo.description, Some("Test Description".to_string()));
+        assert_eq!(todo.name, "Test Todo");
+        assert_eq!(todo.text, Some("Test text".to_string()));
         assert_eq!(todo.priority, Priority::Medium);
     }
 
@@ -175,16 +176,16 @@ mod tests {
     fn test_update_todo() {
         let (todo_list, _dir) = setup_test_db();
         let new_todo = CreateTodo {
-            title: "Test Todo".to_string(),
-            description: None,
+            name: "Test Todo".to_string(),
+            text: None,
             due_date: None,
             priority: Priority::Low,
         };
         let id = todo_list.add(new_todo).unwrap();
 
         let update_todo = UpdateTodo {
-            title: Some("Updated Todo".to_string()),
-            description: Some("Updated Description".to_string()),
+            name: Some("Updated Todo".to_string()),
+            text: Some("Updated text".to_string()),
             due_date: Some(
                 Utc.with_ymd_and_hms(2023, 12, 31, 23, 59, 59)
                     .unwrap()
@@ -196,11 +197,8 @@ mod tests {
         todo_list.update(id, update_todo).unwrap();
 
         let updated_todo = todo_list.get(id).unwrap();
-        assert_eq!(updated_todo.title, "Updated Todo");
-        assert_eq!(
-            updated_todo.description,
-            Some("Updated Description".to_string())
-        );
+        assert_eq!(updated_todo.name, "Updated Todo");
+        assert_eq!(updated_todo.text, Some("Updated text".to_string()));
         assert_eq!(updated_todo.status, Status::Completed);
         assert_eq!(updated_todo.priority, Priority::High);
     }
@@ -209,8 +207,8 @@ mod tests {
     fn test_delete_todo() {
         let (todo_list, _dir) = setup_test_db();
         let new_todo = CreateTodo {
-            title: "Test Todo".to_string(),
-            description: None,
+            name: "Test Todo".to_string(),
+            text: None,
             due_date: None,
             priority: Priority::Low,
         };
@@ -225,14 +223,14 @@ mod tests {
     fn test_list_todos() {
         let (todo_list, _dir) = setup_test_db();
         let todo1 = CreateTodo {
-            title: "Todo 1".to_string(),
-            description: None,
+            name: "Todo 1".to_string(),
+            text: None,
             due_date: None,
             priority: Priority::Low,
         };
         let todo2 = CreateTodo {
-            title: "Todo 2".to_string(),
-            description: None,
+            name: "Todo 2".to_string(),
+            text: None,
             due_date: None,
             priority: Priority::Medium,
         };
@@ -241,7 +239,7 @@ mod tests {
 
         let todos = todo_list.list().unwrap();
         assert_eq!(todos.len(), 2);
-        assert_eq!(todos[0].title, "Todo 1");
-        assert_eq!(todos[1].title, "Todo 2");
+        assert_eq!(todos[0].name, "Todo 1");
+        assert_eq!(todos[1].name, "Todo 2");
     }
 }

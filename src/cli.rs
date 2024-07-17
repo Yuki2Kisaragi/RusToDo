@@ -26,14 +26,11 @@ pub struct Args {
     #[arg(short, long, value_name = "NAME", help = "Update TODO Name")]
     pub name: Option<String>,
 
-    #[arg(
-        long,
-        value_name = "DESCRIPTION",
-        help = "Description for add or update"
-    )]
-    pub description: Option<String>,
+    #[arg(short, long, value_name = "TEXT", help = "TEXT for add or update")]
+    pub text: Option<String>,
 
     #[arg(
+        short,
         long,
         value_name = "DATE",
         help = "Due date for add or update (format: YYYY/MM/DD HH:MM:SS)"
@@ -41,6 +38,7 @@ pub struct Args {
     pub due_date: Option<String>,
 
     #[arg(
+        short,
         long,
         value_name = "PRIORITY",
         help = "Priority for add or update (Low, Medium, High)"

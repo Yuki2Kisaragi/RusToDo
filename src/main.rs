@@ -46,7 +46,7 @@ fn main() -> Result<()> {
     let local_tz = get_local_timezone();
     let todo_list = TodoList::new(local_tz, "todos.db").context("Failed to create TodoList")?;
 
-    if let Some(title) = args.add {
+    if let Some(name) = args.add {
         let priority = args
             .priority
             .as_deref()
@@ -60,8 +60,8 @@ fn main() -> Result<()> {
             .transpose()?;
 
         let new_todo = CreateTodo {
-            title,
-            description: args.description,
+            name,
+            text: args.text,
             due_date,
             priority,
         };
@@ -70,8 +70,8 @@ fn main() -> Result<()> {
         println!("Added new TODO with ID: {}", id);
     } else if let Some(id) = args.update {
         let mut update_todo = UpdateTodo {
-            title: args.name,
-            description: args.description,
+            name: args.name,
+            text: args.text,
             due_date: None,
             status: None,
             priority: None,
@@ -97,8 +97,8 @@ fn main() -> Result<()> {
     } else if let Some(id) = args.show {
         let todo = todo_list.get(id)?;
         println!("ID: {}", todo.id);
-        println!("Name: {}", todo.title);
-        println!("Description: {:?}", todo.description);
+        println!("Name: {}", todo.name);
+        println!("text: {:?}", todo.text);
         println!("Status: {:?}", todo.status);
         println!("Priority: {:?}", todo.priority);
         println!("Created at: {}", todo.created_at);
@@ -111,7 +111,7 @@ fn main() -> Result<()> {
             for todo in todos {
                 println!(
                     "ID: {}, Name: {}, Status: {:?}, Priority: {:?}, Due: {:?}",
-                    todo.id, todo.title, todo.status, todo.priority, todo.due_date
+                    todo.id, todo.name, todo.status, todo.priority, todo.due_date
                 );
             }
         }
@@ -141,8 +141,8 @@ mod tests {
 
         // シナリオ1: 新しいTODOを追加
         let new_todo = CreateTodo {
-            title: "First Task".to_string(),
-            description: Some("This is the first task".to_string()),
+            name: "First Task".to_string(),
+            text: Some("This is the first task".to_string()),
             due_date: Some(
                 Utc.with_ymd_and_hms(2023, 12, 31, 23, 59, 59)
                     .unwrap()
@@ -154,17 +154,14 @@ mod tests {
 
         // 追加されたTODOを検証
         let todo1 = todo_list.get(id1).unwrap();
-        assert_eq!(todo1.title, "First Task");
-        assert_eq!(
-            todo1.description,
-            Some("This is the first task".to_string())
-        );
+        assert_eq!(todo1.name, "First Task");
+        assert_eq!(todo1.text, Some("This is the first task".to_string()));
         assert_eq!(todo1.priority, Priority::High);
 
         // シナリオ2: TODOを更新
         let update_todo = UpdateTodo {
-            title: Some("Updated First Task".to_string()),
-            description: None,
+            name: Some("Updated First Task".to_string()),
+            text: None,
             due_date: None,
             status: Some(Status::InProgress),
             priority: Some(Priority::Medium),
@@ -173,14 +170,14 @@ mod tests {
 
         // 更新されたTODOを検証
         let updated_todo1 = todo_list.get(id1).unwrap();
-        assert_eq!(updated_todo1.title, "Updated First Task");
+        assert_eq!(updated_todo1.name, "Updated First Task");
         assert_eq!(updated_todo1.status, Status::InProgress);
         assert_eq!(updated_todo1.priority, Priority::Medium);
 
         // シナリオ3: 別のTODOを追加
         let another_todo = CreateTodo {
-            title: "Second Task".to_string(),
-            description: None,
+            name: "Second Task".to_string(),
+            text: None,
             due_date: None,
             priority: Priority::Low,
         };
@@ -189,8 +186,8 @@ mod tests {
         // シナリオ4: すべてのTODOをリスト化
         let todos = todo_list.list().unwrap();
         assert_eq!(todos.len(), 2);
-        assert_eq!(todos[0].title, "Updated First Task");
-        assert_eq!(todos[1].title, "Second Task");
+        assert_eq!(todos[0].name, "Updated First Task");
+        assert_eq!(todos[1].name, "Second Task");
 
         // シナリオ5: TODOを削除
         todo_list.delete(id1).unwrap();
@@ -199,6 +196,6 @@ mod tests {
         let remaining_todos = todo_list.list().unwrap();
         assert_eq!(remaining_todos.len(), 1);
         assert_eq!(remaining_todos[0].id, id2);
-        assert_eq!(remaining_todos[0].title, "Second Task");
+        assert_eq!(remaining_todos[0].name, "Second Task");
     }
 }
