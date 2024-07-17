@@ -3,6 +3,7 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use chrono_tz::Tz;
 use rusqlite::{params, Connection, Result as SqliteResult};
+use std::path::Path;
 
 pub struct TodoList {
     conn: Connection,
@@ -10,8 +11,8 @@ pub struct TodoList {
 }
 
 impl TodoList {
-    pub fn new(timezone: Tz) -> Result<Self> {
-        let conn = Connection::open("todos.db")?;
+    pub fn new<P: AsRef<Path>>(timezone: Tz, db_path: P) -> Result<Self> {
+        let conn = Connection::open(db_path)?;
         conn.execute(
             "CREATE TABLE IF NOT EXISTS todos (
                 id INTEGER PRIMARY KEY,
@@ -115,5 +116,132 @@ impl TodoList {
             })
         })
         .context("Todo not found")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::todo::Priority;
+    use chrono::{TimeZone, Utc};
+    use tempfile::tempdir;
+
+    fn setup_test_db() -> (TodoList, tempfile::TempDir) {
+        let dir = tempdir().unwrap();
+        let db_path = dir.path().join("test.db");
+        let tz = Tz::UTC;
+        (TodoList::new(tz, db_path.to_str().unwrap()).unwrap(), dir)
+    }
+
+    #[test]
+    fn test_add_todo() {
+        let (todo_list, _dir) = setup_test_db();
+        let new_todo = CreateTodo {
+            title: "Test Todo".to_string(),
+            description: Some("Test Description".to_string()),
+            due_date: Some(
+                Utc.with_ymd_and_hms(2023, 12, 31, 23, 59, 59)
+                    .unwrap()
+                    .with_timezone(&todo_list.timezone),
+            ),
+            priority: Priority::Medium,
+        };
+        let id = todo_list.add(new_todo).unwrap();
+        assert_eq!(id, 1);
+    }
+
+    #[test]
+    fn test_get_todo() {
+        let (todo_list, _dir) = setup_test_db();
+        let new_todo = CreateTodo {
+            title: "Test Todo".to_string(),
+            description: Some("Test Description".to_string()),
+            due_date: Some(
+                Utc.with_ymd_and_hms(2023, 12, 31, 23, 59, 59)
+                    .unwrap()
+                    .with_timezone(&todo_list.timezone),
+            ),
+            priority: Priority::Medium,
+        };
+        let id = todo_list.add(new_todo).unwrap();
+
+        let todo = todo_list.get(id).unwrap();
+        assert_eq!(todo.title, "Test Todo");
+        assert_eq!(todo.description, Some("Test Description".to_string()));
+        assert_eq!(todo.priority, Priority::Medium);
+    }
+
+    #[test]
+    fn test_update_todo() {
+        let (todo_list, _dir) = setup_test_db();
+        let new_todo = CreateTodo {
+            title: "Test Todo".to_string(),
+            description: None,
+            due_date: None,
+            priority: Priority::Low,
+        };
+        let id = todo_list.add(new_todo).unwrap();
+
+        let update_todo = UpdateTodo {
+            title: Some("Updated Todo".to_string()),
+            description: Some("Updated Description".to_string()),
+            due_date: Some(
+                Utc.with_ymd_and_hms(2023, 12, 31, 23, 59, 59)
+                    .unwrap()
+                    .with_timezone(&todo_list.timezone),
+            ),
+            status: Some(Status::Completed),
+            priority: Some(Priority::High),
+        };
+        todo_list.update(id, update_todo).unwrap();
+
+        let updated_todo = todo_list.get(id).unwrap();
+        assert_eq!(updated_todo.title, "Updated Todo");
+        assert_eq!(
+            updated_todo.description,
+            Some("Updated Description".to_string())
+        );
+        assert_eq!(updated_todo.status, Status::Completed);
+        assert_eq!(updated_todo.priority, Priority::High);
+    }
+
+    #[test]
+    fn test_delete_todo() {
+        let (todo_list, _dir) = setup_test_db();
+        let new_todo = CreateTodo {
+            title: "Test Todo".to_string(),
+            description: None,
+            due_date: None,
+            priority: Priority::Low,
+        };
+        let id = todo_list.add(new_todo).unwrap();
+
+        todo_list.delete(id).unwrap();
+
+        assert!(todo_list.get(id).is_err());
+    }
+
+    #[test]
+    fn test_list_todos() {
+        let (todo_list, _dir) = setup_test_db();
+        let todo1 = CreateTodo {
+            title: "Todo 1".to_string(),
+            description: None,
+            due_date: None,
+            priority: Priority::Low,
+        };
+        let todo2 = CreateTodo {
+            title: "Todo 2".to_string(),
+            description: None,
+            due_date: None,
+            priority: Priority::Medium,
+        };
+        todo_list.add(todo1).unwrap();
+        todo_list.add(todo2).unwrap();
+
+        let todos = todo_list.list().unwrap();
+        assert_eq!(todos.len(), 2);
+        assert_eq!(todos[0].title, "Todo 1");
+        assert_eq!(todos[1].title, "Todo 2");
     }
 }
