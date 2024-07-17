@@ -19,8 +19,8 @@ pub enum Priority {
 #[derive(Debug, Clone)]
 pub struct Todo {
     pub id: u32,
-    pub title: String,
-    pub description: Option<String>,
+    pub name: String,
+    pub text: Option<String>,
     pub status: Status,
     pub created_at: DateTime<Tz>,
     pub due_date: Option<DateTime<Tz>>,
@@ -29,16 +29,16 @@ pub struct Todo {
 
 #[derive(Debug, Clone)]
 pub struct CreateTodo {
-    pub title: String,
-    pub description: Option<String>,
+    pub name: String,
+    pub text: Option<String>,
     pub due_date: Option<DateTime<Tz>>,
     pub priority: Priority,
 }
 
 #[derive(Debug, Clone)]
 pub struct UpdateTodo {
-    pub title: Option<String>,
-    pub description: Option<String>,
+    pub name: Option<String>,
+    pub text: Option<String>,
     pub due_date: Option<DateTime<Tz>>,
     pub status: Option<Status>,
     pub priority: Option<Priority>,
