@@ -42,84 +42,107 @@ fn get_local_timezone() -> Tz {
 
 fn main() -> Result<()> {
     let args = Args::parse();
-
     let local_tz = get_local_timezone();
     let todo_list = TodoList::new(local_tz, "todos.db").context("Failed to create TodoList")?;
 
-    if let Some(name) = args.add {
-        let priority = args
-            .priority
-            .as_deref()
-            .map(parse_priority)
-            .unwrap_or(Ok(Priority::Medium))?;
-
-        let due_date = args
-            .due_date
-            .as_deref()
-            .map(|date_str| parse_date(date_str, &local_tz))
-            .transpose()?;
-
-        let new_todo = CreateTodo {
-            name,
-            text: args.text,
-            due_date,
-            priority,
-        };
-
-        let id = todo_list.add(new_todo)?;
-        println!("Added new TODO with ID: {}", id);
-    } else if let Some(id) = args.update {
-        let mut update_todo = UpdateTodo {
-            name: args.name,
-            text: args.text,
-            due_date: None,
-            status: None,
-            priority: None,
-        };
-
-        if let Some(priority) = args.priority {
-            update_todo.priority = Some(parse_priority(&priority)?);
+    match args {
+        Args {
+            add: Some(ref name),
+            ..
+        } => add_todo(&todo_list, name, &args, &local_tz),
+        Args {
+            update: Some(id), ..
+        } => update_todo(&todo_list, id, &args, &local_tz),
+        Args {
+            delete: Some(id), ..
+        } => delete_todo(&todo_list, id),
+        Args { show: Some(id), .. } => show_todo(&todo_list, id),
+        Args { list: true, .. } | Args { .. } if std::env::args().len() == 1 => {
+            list_todos(&todo_list)
         }
-
-        if let Some(status) = args.status {
-            update_todo.status = Some(parse_status(&status)?);
+        _ => {
+            println!("Usage: rustodo [OPTIONS]");
+            println!("Use --help to see available options.");
+            Ok(())
         }
+    }
+}
 
-        if let Some(date_str) = args.due_date {
-            update_todo.due_date = Some(parse_date(&date_str, &local_tz)?);
-        }
+fn add_todo(todo_list: &TodoList, name: &str, args: &Args, local_tz: &Tz) -> Result<()> {
+    let priority = args
+        .priority
+        .as_deref()
+        .map(parse_priority)
+        .unwrap_or(Ok(Priority::Medium))?;
 
-        todo_list.update(id, update_todo)?;
-        println!("Updated TODO with ID: {}", id);
-    } else if let Some(id) = args.delete {
-        todo_list.delete(id)?;
-        println!("Deleted TODO with ID: {}", id);
-    } else if let Some(id) = args.show {
-        let todo = todo_list.get(id)?;
-        println!("ID: {}", todo.id);
-        println!("Name: {}", todo.name);
-        println!("text: {:?}", todo.text);
-        println!("Status: {:?}", todo.status);
-        println!("Priority: {:?}", todo.priority);
-        println!("Created at: {}", todo.created_at);
-        println!("Due date: {:?}", todo.due_date);
-    } else if args.list || std::env::args().len() == 1 {
-        let todos = todo_list.list()?;
-        if todos.is_empty() {
-            println!("TODO list is empty.");
-        } else {
-            for todo in todos {
-                println!(
-                    "ID: {}, Name: {}, Status: {:?}, Priority: {:?}, Due: {:?}",
-                    todo.id, todo.name, todo.status, todo.priority, todo.due_date
-                );
-            }
-        }
-    } else {
-        println!("Usage: rustodo [OPTIONS]");
-        println!("Use --help to see available options.");
+    let due_date = args
+        .due_date
+        .as_deref()
+        .map(|date_str| parse_date(date_str, local_tz))
+        .transpose()?;
+
+    let new_todo = CreateTodo {
+        name: name.to_string(),
+        text: args.text.clone(),
+        due_date,
+        priority,
+    };
+
+    let id = todo_list.add(new_todo)?;
+    println!("Added new TODO with ID: {}", id);
+    Ok(())
+}
+
+fn update_todo(todo_list: &TodoList, id: u32, args: &Args, local_tz: &Tz) -> Result<()> {
+    let mut update_todo = UpdateTodo {
+        name: args.name.clone(),
+        text: args.text.clone(),
+        due_date: None,
+        status: None,
+        priority: None,
+    };
+
+    if let Some(priority) = &args.priority {
+        update_todo.priority = Some(parse_priority(priority)?);
     }
 
+    if let Some(status) = &args.status {
+        update_todo.status = Some(parse_status(status)?);
+    }
+
+    if let Some(date_str) = &args.due_date {
+        update_todo.due_date = Some(parse_date(date_str, local_tz)?);
+    }
+
+    todo_list.update(id, update_todo)?;
+    println!("Updated TODO with ID: {}", id);
+    Ok(())
+}
+
+fn delete_todo(todo_list: &TodoList, id: u32) -> Result<()> {
+    todo_list.delete(id)?;
+    println!("Deleted TODO with ID: {}", id);
+    Ok(())
+}
+
+fn show_todo(todo_list: &TodoList, id: u32) -> Result<()> {
+    let todo = todo_list.get(id)?;
+    println!("{}", todo);
+    Ok(())
+}
+
+fn list_todos(todo_list: &TodoList) -> Result<()> {
+    let todos = todo_list.list()?;
+    if todos.is_empty() {
+        println!("TODO list is empty.");
+    } else {
+        for todo in todos {
+            println!(
+                "ID: {}, Name: {}, Status: {:?}, Priority: {:?}, Due: {:?}",
+                todo.id, todo.name, todo.status, todo.priority, todo.due_date
+            );
+        }
+    }
     Ok(())
 }
 

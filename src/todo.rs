@@ -1,5 +1,6 @@
 use chrono::DateTime;
 use chrono_tz::Tz;
+use core::fmt;
 use std::str::FromStr;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -25,6 +26,18 @@ pub struct Todo {
     pub created_at: DateTime<Tz>,
     pub due_date: Option<DateTime<Tz>>,
     pub priority: Priority,
+}
+
+impl fmt::Display for Todo {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "ID: {}", self.id)?;
+        writeln!(f, "Name: {}", self.name)?;
+        writeln!(f, "text: {:?}", self.text)?;
+        writeln!(f, "Status: {:?}", self.status)?;
+        writeln!(f, "Priority: {:?}", self.priority)?;
+        writeln!(f, "Created at: {}", self.created_at)?;
+        writeln!(f, "Due date: {:?}", self.due_date)
+    }
 }
 
 #[derive(Debug, Clone)]
