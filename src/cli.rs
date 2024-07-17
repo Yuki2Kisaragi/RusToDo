@@ -3,9 +3,9 @@ use clap::Parser;
 #[derive(Parser, Debug)]
 #[command(
     name = "RusToDo",
-    version = "0.1",
-    author = "MasaHero <yourmail@example.com>",
-    about = "CLI上で動かせるTODOアプリです。"
+    version = "1.0",
+    author = "MasaHero",
+    about = "CLI Based TODOList Application"
 )]
 pub struct Args {
     #[arg(short, long, help = "List up TODO's (Default)")]
