@@ -44,7 +44,7 @@ fn main() -> Result<()> {
     let args = Args::parse();
 
     let local_tz = get_local_timezone();
-    let todo_list = TodoList::new(local_tz).context("Failed to create TodoList")?;
+    let todo_list = TodoList::new(local_tz, "todos.db").context("Failed to create TodoList")?;
 
     if let Some(title) = args.add {
         let priority = args
@@ -122,25 +122,83 @@ fn main() -> Result<()> {
 
     Ok(())
 }
+
 #[cfg(test)]
 mod tests {
-    // use super::*;
+    use super::*;
+    use chrono::Utc;
+    use tempfile::tempdir;
+    use todo::{CreateTodo, Priority, Status, UpdateTodo};
+    use todo_list::TodoList;
 
     #[test]
     fn scenario_test() {
         // 新しいTODOリストを作成
+        let dir = tempdir().unwrap();
+        let db_path = dir.path().join("test.db");
+        let local_tz = chrono_tz::Tz::UTC;
+        let todo_list = TodoList::new(local_tz, db_path.to_str().unwrap()).unwrap();
 
         // シナリオ1: 新しいTODOを追加
+        let new_todo = CreateTodo {
+            title: "First Task".to_string(),
+            description: Some("This is the first task".to_string()),
+            due_date: Some(
+                Utc.with_ymd_and_hms(2023, 12, 31, 23, 59, 59)
+                    .unwrap()
+                    .with_timezone(&local_tz),
+            ),
+            priority: Priority::High,
+        };
+        let id1 = todo_list.add(new_todo).unwrap();
+
         // 追加されたTODOを検証
+        let todo1 = todo_list.get(id1).unwrap();
+        assert_eq!(todo1.title, "First Task");
+        assert_eq!(
+            todo1.description,
+            Some("This is the first task".to_string())
+        );
+        assert_eq!(todo1.priority, Priority::High);
 
         // シナリオ2: TODOを更新
+        let update_todo = UpdateTodo {
+            title: Some("Updated First Task".to_string()),
+            description: None,
+            due_date: None,
+            status: Some(Status::InProgress),
+            priority: Some(Priority::Medium),
+        };
+        todo_list.update(id1, update_todo).unwrap();
+
         // 更新されたTODOを検証
+        let updated_todo1 = todo_list.get(id1).unwrap();
+        assert_eq!(updated_todo1.title, "Updated First Task");
+        assert_eq!(updated_todo1.status, Status::InProgress);
+        assert_eq!(updated_todo1.priority, Priority::Medium);
 
         // シナリオ3: 別のTODOを追加
+        let another_todo = CreateTodo {
+            title: "Second Task".to_string(),
+            description: None,
+            due_date: None,
+            priority: Priority::Low,
+        };
+        let id2 = todo_list.add(another_todo).unwrap();
 
         // シナリオ4: すべてのTODOをリスト化
+        let todos = todo_list.list().unwrap();
+        assert_eq!(todos.len(), 2);
+        assert_eq!(todos[0].title, "Updated First Task");
+        assert_eq!(todos[1].title, "Second Task");
 
         // シナリオ5: TODOを削除
+        todo_list.delete(id1).unwrap();
+
         // 削除後のリストを検証
+        let remaining_todos = todo_list.list().unwrap();
+        assert_eq!(remaining_todos.len(), 1);
+        assert_eq!(remaining_todos[0].id, id2);
+        assert_eq!(remaining_todos[0].title, "Second Task");
     }
 }
