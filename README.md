@@ -47,16 +47,37 @@ RusToDo is a simple CLI-based TODO application written in Rust.
 RusToDo は以下のコマンドで操作できます:
 RusToDo can be operated with the following commands:
 
+```sh
+rtd --help
+CLI Based TodoList Application
+
+Usage: rtd [OPTIONS]
+
+Options:
+  -l, --list                 List up TODOs (Default)
+  -a, --add <TITLE>          Add TODO with title
+  -u, --update <ID>          Update TODO by ID
+  -d, --delete <ID>          Delete TODO by ID
+  -s, --show <ID>            Show detail of TODO by ID
+  -n, --name <NAME>          Update TODO Name
+  -t, --text <TEXT>          TEXT for add or update
+  -d, --due-date <DATE>      Due date for add or update (format: YYYY/MM/DD HH:MM:SS)
+  -p, --priority <PRIORITY>  Priority for add or update (Low, Medium, High)
+      --status <STATUS>      Status for update (Pending, InProgress, Completed)
+  -h, --help                 Print help
+  -V, --version              Print version
+```
+
 1. TODO の追加 / Add a TODO:
 
    ```
-   rtd --add "タスク名" --description "タスクの説明" --priority high
+   rtd --add "Task's name" --text "Task's description" --priority high
    ```
 
 2. TODO の更新 / Update a TODO:
 
    ```
-   rtd --update <ID> --name "新しいタスク名" --status completed
+   rtd --update <ID> --name "Task's name" --status completed
    ```
 
 3. TODO の削除 / Delete a TODO:
@@ -78,13 +99,13 @@ RusToDo can be operated with the following commands:
 
 ### オプション / Options
 
-- `--add <TITLE>`: 新しい TODO を追加 / Add a new TODO
+- `--add <NAME>`: 新しい TODO を追加 / Add a new TODO
 - `--update <ID>`: 指定 ID の TODO を更新 / Update a TODO with the specified ID
 - `--delete <ID>`: 指定 ID の TODO を削除 / Delete a TODO with the specified ID
 - `--list`: すべての TODO を表示 / List all TODOs
 - `--show <ID>`: 指定 ID の TODO の詳細を表示 / Show details of a TODO with the specified ID
-- `--name <TITLE>`: TODO のタイトルを設定（追加・更新時に使用） / Set the title of a TODO (used with add or update)
-- `--description <DESC>`: TODO の説明を設定 / Set the description of a TODO
+- `--name <NAME>`: TODO のタイトルを設定（追加・更新時に使用） / Set the name of a TODO (used with add or update)
+- `--text <TEXT>`: TODO の説明を設定 / Set the text of a TODO
 - `--priority <PRIORITY>`: TODO の優先度を設定（low/medium/high） / Set the priority of a TODO (low/medium/high)
 - `--status <STATUS>`: TODO の状態を設定（pending/inprogress/completed） / Set the status of a TODO (pending/inprogress/completed)
 - `--due_date <DATE>`: TODO の期限を設定（YYYY/MM/DD HH:MM:SS 形式） / Set the due date of a TODO (format: YYYY/MM/DD HH:MM:SS)
