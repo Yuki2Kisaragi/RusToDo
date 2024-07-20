@@ -45,26 +45,20 @@ fn main() -> Result<()> {
     let local_tz = get_local_timezone();
     let todo_list = TodoList::new(local_tz, "todos.db").context("Failed to create TodoList")?;
 
-    match args {
-        Args {
-            add: Some(ref name),
-            ..
-        } => add_todo(&todo_list, name, &args, &local_tz),
-        Args {
-            update: Some(id), ..
-        } => update_todo(&todo_list, id, &args, &local_tz),
-        Args {
-            delete: Some(id), ..
-        } => delete_todo(&todo_list, id),
-        Args { show: Some(id), .. } => show_todo(&todo_list, id),
-        Args { list: true, .. } | Args { .. } if std::env::args().len() == 1 => {
-            list_todos(&todo_list)
-        }
-        _ => {
-            println!("Usage: rustodo [OPTIONS]");
-            println!("Use --help to see available options.");
-            Ok(())
-        }
+    if args.list || std::env::args().len() == 1 {
+        list_todos(&todo_list)
+    } else if let Some(ref name) = args.add {
+        add_todo(&todo_list, name, &args, &local_tz)
+    } else if let Some(id) = args.update {
+        update_todo(&todo_list, id, &args, &local_tz)
+    } else if let Some(id) = args.delete {
+        delete_todo(&todo_list, id)
+    } else if let Some(id) = args.show {
+        show_todo(&todo_list, id)
+    } else {
+        println!("Usage: rustodo [OPTIONS]");
+        println!("Use --help to see available options.");
+        Ok(())
     }
 }
 

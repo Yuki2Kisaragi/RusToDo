@@ -3,7 +3,7 @@ use crate::Priority;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use chrono_tz::Tz;
-use rusqlite::{params, Connection, Result as SqliteResult};
+use rusqlite::{params, Connection};
 use std::path::Path;
 use std::str::FromStr;
 pub struct TodoList {
@@ -102,7 +102,7 @@ impl TodoList {
                 id: row.get(0)?,
                 name: row.get(1)?,
                 text: row.get(2)?,
-                status: row.get::<_, String>(3)?.parse().unwrap(),
+                status: Status::from_str(&row.get::<_, String>(3)?).unwrap(),
                 created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(4)?)
                     .unwrap()
                     .with_timezone(&self.timezone),
@@ -111,12 +111,12 @@ impl TodoList {
                         .unwrap()
                         .with_timezone(&self.timezone)
                 }),
-                priority: row.get::<_, String>(6)?.parse().unwrap(),
+                priority: Priority::from_str(&row.get::<_, String>(6)?).unwrap(),
             })
         })?;
         todos
-            .collect::<SqliteResult<Vec<Todo>>>()
-            .context("Failed to collect todos")
+            .collect::<Result<Vec<Todo>, _>>()
+            .map_err(|e| e.into())
     }
 }
 
