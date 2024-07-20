@@ -17,7 +17,7 @@ RusToDo is a simple CLI-based TODO application written in Rust.
    Clone this repository:
 
    ```
-   git clone https://github.com/yourusername/rustodo.git
+   git clone https://github.com/Yuki2Kisaragi/RusToDo.git
    cd rustodo
    ```
 
