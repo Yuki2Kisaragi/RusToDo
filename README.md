@@ -1,4 +1,5 @@
 # RusToDo
+![output](https://github.com/user-attachments/assets/aa68f2ff-3789-4dd4-a002-0369e7be4745)
 
 RusToDo は Rust で書かれたシンプルな CLI ベースの TODO アプリケーションです。
 
@@ -49,21 +50,21 @@ RusToDo can be operated with the following commands:
 
 ```sh
 rtd --help
-CLI Based TodoList Application
+CLI Based TODOList Application
 
 Usage: rtd [OPTIONS]
 
 Options:
-  -l, --list                 List up TODOs (Default)
-  -a, --add <TITLE>          Add TODO with title
-  -u, --update <ID>          Update TODO by ID
-  -d, --delete <ID>          Delete TODO by ID
-  -s, --show <ID>            Show detail of TODO by ID
-  -n, --name <NAME>          Update TODO Name
-  -t, --text <TEXT>          TEXT for add or update
-  -d, --due-date <DATE>      Due date for add or update (format: YYYY/MM/DD HH:MM:SS)
-  -p, --priority <PRIORITY>  Priority for add or update (Low, Medium, High)
-      --status <STATUS>      Status for update (Pending, InProgress, Completed)
+  -l, --list                 List up TODO's (Default)
+  -A, --add <ADD>            Add TODO
+  -U, --update <UPDATE>      Update TODO
+  -D, --delete <DELETE>      Delete TODO
+  -S, --show <SHOW>          Show Detail TODO
+  -n, --name <NAME>          Set TODO name
+  -t, --text <TEXT>          Set TODO text
+  -e, --due-date <DUE_DATE>  Set due date (format: YYYY/MM/DD HH:MM:SS)
+  -p, --priority <PRIORITY>  Set priority (Low, Medium, High)
+  -s, --status <STATUS>      Set status (Pending, InProgress, Completed)
   -h, --help                 Print help
   -V, --version              Print version
 ```
